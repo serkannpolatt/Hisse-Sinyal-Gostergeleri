@@ -7,26 +7,6 @@ import ssl
 from urllib import request
 
 
-base="light"
-
-def main():
-    st.sidebar.title("İletişim Bilgileri")
-    st.sidebar.subheader("Yazar:")
-    st.sidebar.write("Serkan Polat")
-
-    # İletişim bilgilerini sidebar içinde görüntüledim
-    st.sidebar.subheader("E-posta:")
-    st.sidebar.write("itsonlydatahustle@gmail.com")
-    st.sidebar.subheader("Linkedln:")
-    st.sidebar.write("www.linkedin.com/in/serkann-polatt")
-    st.sidebar.subheader("Github:")
-    st.sidebar.write("https://github.com/serkannpolatt")
-    st.sidebar.subheader("Kaggle:")
-    st.sidebar.write("https://www.kaggle.com/serkanp")
-    st.sidebar.subheader("Daha fazlası için:")
-    st.sidebar.write("https://bento.me/serkan-polat")
-
-
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
     url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"

@@ -26,11 +26,6 @@ def main():
     st.sidebar.subheader("Daha fazlası için:")
     st.sidebar.write("https://bento.me/serkan-polat")
 
-if __name__ == "__main__":
-    main()
-
-
-
 
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():

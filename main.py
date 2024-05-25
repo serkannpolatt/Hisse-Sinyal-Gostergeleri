@@ -105,11 +105,11 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
-base="light"
 st.set_page_config(
     page_title="Hisse Sinyalleri",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    theme={"base": "light"}  # Set the base theme to "light"
 )
 
 with st.sidebar:

@@ -105,9 +105,9 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
+import base64
 
-import streamlit as st
-
+base="light"
 st.set_page_config(
     page_title="Hisse Sinyalleri",
     layout="wide",

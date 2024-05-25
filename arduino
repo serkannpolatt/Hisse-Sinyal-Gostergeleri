@@ -1,4 +1,0 @@
-your_project/
-├── .streamlit/
-│   └── config.toml
-└── main.py

@@ -105,11 +105,13 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
+
+import streamlit as st
+
 st.set_page_config(
     page_title="Hisse Sinyalleri",
     layout="wide",
-    initial_sidebar_state="expanded",
-    theme={"base": "light"}  # Set the base theme to "light"
+    initial_sidebar_state="expanded"
 )
 
 with st.sidebar:

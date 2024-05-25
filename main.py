@@ -6,6 +6,7 @@ import streamlit as st
 import ssl
 from urllib import request
 
+base="light"
 
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():

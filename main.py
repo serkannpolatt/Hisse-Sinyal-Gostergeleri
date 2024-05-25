@@ -6,27 +6,6 @@ import streamlit as st
 import ssl
 from urllib import request
 
-base="light"
-
-def main():
-    st.sidebar.title("İletişim Bilgileri")
-    st.sidebar.subheader("Yazar:")
-    st.sidebar.write("Serkan Polat")
-
-    # İletişim bilgilerini sidebar içinde görüntüledim
-    st.sidebar.subheader("E-posta:")
-    st.sidebar.write("itsonlydatahustle@gmail.com")
-    st.sidebar.subheader("Linkedln:")
-    st.sidebar.write("www.linkedin.com/in/serkann-polatt")
-    st.sidebar.subheader("Github:")
-    st.sidebar.write("https://github.com/serkannpolatt")
-    st.sidebar.subheader("Kaggle:")
-    st.sidebar.write("https://www.kaggle.com/serkanp")
-    st.sidebar.subheader("Daha fazlası için:")
-    st.sidebar.write("https://bento.me/serkan-polat")
-
-if __name__ == "__main__":
-    main()
 
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
@@ -126,6 +105,7 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
+base="light"
 st.set_page_config(
     page_title="Hisse Sinyalleri",
     layout="wide",

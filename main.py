@@ -106,6 +106,8 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
     return data
 
 
+import streamlit as st
+
 st.set_page_config(
     page_title="Hisse Sinyalleri",
     layout="wide",
@@ -127,11 +129,12 @@ col1, col2, col3, col4, col5 = st.columns(5)
 Close = Son_Durum['Close'].iloc[0]
 OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
 Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
-Tillson_Sinyal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
+Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
 
 col2.metric('Kapanış Fiyatı', str(Close))
 col3.metric('OTT Sinyal', str(OTT_Signal))
 col4.metric('Z Skor Sinyal', str(Zscore_Signal))
-col5.metric('Tillson Sinyal', str(Tillson_Sinyal))
+col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
 st.dataframe(data.iloc[::-1], use_container_width=True)
+

@@ -17,20 +17,19 @@ def Hisse_Temel_Veriler():
             response = request.urlopen(url, context=context)
             html_content = response.read()
             df_list = pd.read_html(html_content, decimal=',', thousands='.')
-            # Assuming df_list[2] contains the desired table; adjust index as needed
-            df = df_list[2].copy()  # Make a copy of the DataFrame for safety
+            df = df_list[2].copy()  # Assuming df_list[2] contains the desired table
             return df
         except error.URLError as e:
-            print(f"Attempt {attempt + 1} failed: {e.reason}")
+            st.error(f"Attempt {attempt + 1} failed: {e.reason}")
             time.sleep(5)  # Wait for 5 seconds before retrying
         except error.HTTPError as e:
-            print(f"HTTP error occurred: {e.code} - {e.reason}")
+            st.error(f"HTTP error occurred: {e.code} - {e.reason}")
             break
         except error.ContentTooShortError as e:
-            print(f"Content too short error: {e.reason}")
+            st.error(f"Content too short error: {e.reason}")
             break
         except Exception as e:
-            print(f"An error occurred: {e}")
+            st.error(f"An error occurred: {e}")
             break
     return pd.DataFrame()  # Return an empty DataFrame if all retries fail
 
@@ -130,7 +129,6 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
         st.error(f"An error occurred while generating signals: {e}")
         return pd.DataFrame()
 
-
 base="light"
 
 st.set_page_config(
@@ -140,8 +138,8 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    Hisse_Ozet = Hisse_Temel_Veriler()
     st.header('Hisse Arama')
+    Hisse_Ozet = Hisse_Temel_Veriler()
     
     if not Hisse_Ozet.empty and 'Kod' in Hisse_Ozet.columns:
         Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])

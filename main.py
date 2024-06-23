@@ -8,24 +8,14 @@ from urllib import request
 
 
 # Function to retrieve stock fundamental data
-import logging
-
-# Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
-    url = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
-    try:
-        context = ssl._create_unverified_context()
-        response = request.urlopen(url, context=context)
-        html_content = response.read()
-        df_list = pd.read_html(html_content, decimal=',', thousands='.')
-        # Assuming df_list[2] contains the desired table; adjust index as needed
-        df = df_list[2].copy()  # Make a copy of the DataFrame for safety
-        logging.info(f"DataFrame retrieved successfully: Shape={df.shape}, Columns={df.columns}")
-        return df
-    except Exception as e:
-        logging.error(f"Failed to fetch data from {url}: {e}")
-        return pd.DataFrame()  # Return an empty DataFrame or handle the error as needed
-
+    url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
+    context = ssl._create_unverified_context()
+    response = request.urlopen(url1, context=context)
+    url1 = response.read()
+    df = pd.read_html(url1, decimal=',', thousands='.')
+    df1 = df[2]  # Summary table of all stocks
+    return df1
 
 tv = TvDatafeed()
 
@@ -127,30 +117,24 @@ st.set_page_config(
 with st.sidebar:
     Hisse_Ozet = Hisse_Temel_Veriler()
     st.header('Hisse Arama')
-    
-    if not Hisse_Ozet.empty and 'Kod' in Hisse_Ozet.columns:
-        Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
-        Lenght_1 = 6
-        vf = 0.8
-        prt = 2
-        prc = 1.2
-        data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
+    Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
+    Lenght_1 = 6
+    vf = 0.8
+    prt = 2
+    prc = 1.2
+    data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
 
-        Son_Durum = data.tail(1)
-        col1, col2, col3, col4, col5 = st.columns(5)
-        Close = Son_Durum['Close'].iloc[0]
-        OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
-        Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
-        Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
+Son_Durum = data.tail(1)
+col1, col2, col3, col4, col5 = st.columns(5)
+Close = Son_Durum['Close'].iloc[0]
+OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
+Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
+Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
 
-        col2.metric('Kapanış Fiyatı', str(Close))
-        col3.metric('OTT Sinyal', str(OTT_Signal))
-        col4.metric('Z Skor Sinyal', str(Zscore_Signal))
-        col5.metric('Tillson Sinyal', str(Tillson_Signal))
-
-        st.dataframe(data.iloc[::-1], use_container_width=True)
-    else:
-        st.error("Data format issue or DataFrame is empty. Please check the source or try again later.")
+col2.metric('Kapanış Fiyatı', str(Close))
+col3.metric('OTT Sinyal', str(OTT_Signal))
+col4.metric('Z Skor Sinyal', str(Zscore_Signal))
+col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
 st.dataframe(data.iloc[::-1], use_container_width=True)
 

@@ -7,7 +7,7 @@ import ssl
 from urllib import request, error
 import time
 
-# Function to retrieve stock fundamental data
+# Function to retrieve stock fundamental data with retries
 def Hisse_Temel_Veriler():
     url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
     context = ssl._create_unverified_context()

@@ -6,6 +6,11 @@ import streamlit as st
 import ssl
 from urllib import request, error
 import time
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Function to retrieve stock fundamental data with retry logic
 def Hisse_Temel_Veriler():
@@ -14,23 +19,24 @@ def Hisse_Temel_Veriler():
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            response = request.urlopen(url, context=context)
+            response = request.urlopen(url, context=context, timeout=30)
             html_content = response.read()
             df_list = pd.read_html(html_content, decimal=',', thousands='.')
             df = df_list[2].copy()  # Assuming df_list[2] contains the desired table
             return df
         except error.URLError as e:
-            st.error(f"Attempt {attempt + 1} failed: {e.reason}")
+            logger.error(f"Attempt {attempt + 1} failed: {e.reason}")
             time.sleep(5)  # Wait for 5 seconds before retrying
         except error.HTTPError as e:
-            st.error(f"HTTP error occurred: {e.code} - {e.reason}")
+            logger.error(f"HTTP error occurred: {e.code} - {e.reason}")
             break
         except error.ContentTooShortError as e:
-            st.error(f"Content too short error: {e.reason}")
+            logger.error(f"Content too short error: {e.reason}")
             break
         except Exception as e:
-            st.error(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
             break
+    logger.error("Failed to retrieve stock fundamental data after multiple attempts.")
     return pd.DataFrame()  # Return an empty DataFrame if all retries fail
 
 tv = TvDatafeed()
@@ -127,6 +133,7 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
         return data
     except Exception as e:
         st.error(f"An error occurred while generating signals: {e}")
+        logger.error(f"An error occurred while generating signals: {e}")
         return pd.DataFrame()
 
 base="light"
@@ -143,14 +150,19 @@ with st.sidebar:
     
     if not Hisse_Ozet.empty and 'Kod' in Hisse_Ozet.columns:
         Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
-        Lenght_1 = 6
-        vf = 0.8
-        prt = 2
-        prc = 1.2
-        data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
     else:
         st.error("Failed to retrieve stock fundamental data. Please try again later.")
-        data = pd.DataFrame()  # Initialize an empty DataFrame
+        Hisse_Adı = None
+
+    Lenght_1 = 6
+    vf = 0.8
+    prt = 2
+    prc = 1.2
+    
+    if Hisse_Adı:
+        data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
+    else:
+        data = pd.DataFrame()
 
 if not data.empty and all(col in data.columns for col in ['Close', 'OTT_Signal', 'Zscore_Signal', 'Exit']):
     Son_Durum = data.tail(1)

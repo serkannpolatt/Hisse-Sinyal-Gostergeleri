@@ -8,14 +8,22 @@ from urllib import request
 
 
 # Function to retrieve stock fundamental data
+import logging
+
+# Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
-    url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
-    context = ssl._create_unverified_context()
-    response = request.urlopen(url1, context=context)
-    url1 = response.read()
-    df = pd.read_html(url1, decimal=',', thousands='.')
-    df1 = df[2]  # Summary table of all stocks
-    return df1
+    url = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
+    try:
+        context = ssl._create_unverified_context()
+        response = request.urlopen(url, context=context)
+        html_content = response.read()
+        df = pd.read_html(html_content, decimal=',', thousands='.')
+        df1 = df[2]  # Assuming df[2] is the correct table index
+        return df1
+    except Exception as e:
+        logging.error(f"Failed to fetch data from {url}: {e}")
+        return pd.DataFrame()  # Return an empty DataFrame or handle the error as needed
+
 
 tv = TvDatafeed()
 

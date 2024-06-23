@@ -6,23 +6,28 @@ import streamlit as st
 import ssl
 from urllib import request
 from urllib.error import URLError, HTTPError
+import time
 
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
     url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
     context = ssl._create_unverified_context()
-    try:
-        response = request.urlopen(url1, context=context)
-        url1 = response.read()
-        df = pd.read_html(url1, decimal=',', thousands='.')
-        df1 = df[2]  # Summary table of all stocks
-        return df1
-    except HTTPError as e:
-        st.error(f"HTTP Error: {e.code} - {e.reason}")
-    except URLError as e:
-        st.error(f"URL Error: {e.reason}")
-    except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+    for attempt in range(3):  # Retry mechanism
+        try:
+            req = request.Request(url1, headers=headers)
+            response = request.urlopen(req, context=context, timeout=10)
+            url1 = response.read()
+            df = pd.read_html(url1, decimal=',', thousands='.')
+            df1 = df[2]  # Summary table of all stocks
+            return df1
+        except (HTTPError, URLError) as e:
+            st.error(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(5)  # Wait before retrying
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {e}")
+            break
     return None
 
 tv = TvDatafeed()
@@ -112,7 +117,6 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
             data.at[data.index[i], 'Exit'] = True
 
     return data
-
 
 base = "light"
 

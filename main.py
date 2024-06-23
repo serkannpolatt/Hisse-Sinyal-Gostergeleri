@@ -5,7 +5,7 @@ from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
 import ssl
 from urllib import request
-from urllib.error import URLError
+from urllib.error import URLError, HTTPError
 
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
@@ -17,9 +17,13 @@ def Hisse_Temel_Veriler():
         df = pd.read_html(url1, decimal=',', thousands='.')
         df1 = df[2]  # Summary table of all stocks
         return df1
+    except HTTPError as e:
+        st.error(f"HTTP Error: {e.code} - {e.reason}")
     except URLError as e:
-        st.error(f"Error fetching data: {e}")
-        return None
+        st.error(f"URL Error: {e.reason}")
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {e}")
+    return None
 
 tv = TvDatafeed()
 
@@ -110,7 +114,7 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
     return data
 
 
-base="light"
+base = "light"
 
 st.set_page_config(
     page_title="Hisse Sinyalleri",

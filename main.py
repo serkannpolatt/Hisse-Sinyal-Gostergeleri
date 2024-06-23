@@ -17,10 +17,11 @@ def Hisse_Temel_Veriler():
         context = ssl._create_unverified_context()
         response = request.urlopen(url, context=context)
         html_content = response.read()
-        df = pd.read_html(html_content, decimal=',', thousands='.')
-        df1 = df[2]  # Assuming df[2] is the correct table index
-        logging.info(f"DataFrame retrieved: {df1.head()}")  # Log first few rows for inspection
-        return df1
+        df_list = pd.read_html(html_content, decimal=',', thousands='.')
+        # Assuming df_list[2] contains the desired table; adjust index as needed
+        df = df_list[2].copy()  # Make a copy of the DataFrame for safety
+        logging.info(f"DataFrame retrieved successfully: Shape={df.shape}, Columns={df.columns}")
+        return df
     except Exception as e:
         logging.error(f"Failed to fetch data from {url}: {e}")
         return pd.DataFrame()  # Return an empty DataFrame or handle the error as needed

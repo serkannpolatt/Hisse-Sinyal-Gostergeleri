@@ -19,10 +19,12 @@ def Hisse_Temel_Veriler():
         html_content = response.read()
         df = pd.read_html(html_content, decimal=',', thousands='.')
         df1 = df[2]  # Assuming df[2] is the correct table index
+        logging.info(f"DataFrame retrieved: {df1.head()}")  # Log first few rows for inspection
         return df1
     except Exception as e:
         logging.error(f"Failed to fetch data from {url}: {e}")
         return pd.DataFrame()  # Return an empty DataFrame or handle the error as needed
+
 
 
 tv = TvDatafeed()

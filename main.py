@@ -4,40 +4,18 @@ import pandas_ta as ta
 from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
 import ssl
-from urllib import request, error
-import time
-import logging
+from urllib import request
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# Function to retrieve stock fundamental data with retry logic
+# Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
-    url = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
+    url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
     context = ssl._create_unverified_context()
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = request.urlopen(url, context=context, timeout=30)
-            html_content = response.read()
-            df_list = pd.read_html(html_content, decimal=',', thousands='.')
-            df = df_list[2].copy()  # Assuming df_list[2] contains the desired table
-            return df
-        except error.URLError as e:
-            logger.error(f"Attempt {attempt + 1} failed: {e.reason}")
-            time.sleep(5)  # Wait for 5 seconds before retrying
-        except error.HTTPError as e:
-            logger.error(f"HTTP error occurred: {e.code} - {e.reason}")
-            break
-        except error.ContentTooShortError as e:
-            logger.error(f"Content too short error: {e.reason}")
-            break
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-            break
-    logger.error("Failed to retrieve stock fundamental data after multiple attempts.")
-    return pd.DataFrame()  # Return an empty DataFrame if all retries fail
+    response = request.urlopen(url1, context=context)
+    url1 = response.read()
+    df = pd.read_html(url1, decimal=',', thousands='.')
+    df1 = df[2]  # Summary table of all stocks
+    return df1
 
 tv = TvDatafeed()
 
@@ -102,39 +80,31 @@ def OTT(df, prt, prc):
 
 # Function to generate indicator signals
 def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
-    try:
-        data = tv.get_hist(symbol=Hisse_Adı, exchange='BIST', interval=Interval.in_daily, n_bars=500)
-        if data is None or data.empty:
-            st.warning(f"Failed to retrieve data for {Hisse_Adı}. Data may be limited or unavailable.")
-            return pd.DataFrame()
+    data = tv.get_hist(symbol=Hisse_Adı, exchange='BIST', interval=Interval.in_daily, n_bars=500)
+    data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
 
-        data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
+    OTT_Signal = OTT(data.copy(deep=True), prt, prc)
+    Tillson = TillsonT3(data['Close'], data['High'], data['Low'], vf, Lenght_1)
+    Zscore = ta.zscore(data['Close'], 21, 1)
+    Zsma = ta.sma(Zscore)
 
-        OTT_Signal = OTT(data.copy(deep=True), prt, prc)
-        Tillson = TillsonT3(data['Close'], data['High'], data['Low'], vf, Lenght_1)
-        Zscore = ta.zscore(data['Close'], 21, 1)
-        Zsma = ta.sma(Zscore)
+    data['OTT'] = OTT_Signal['OTT3']
+    data['Var'] = OTT_Signal['Var']
+    data['Tillson'] = Tillson
+    data['Zscore'] = Zscore
+    data['ZSMA'] = Zsma
 
-        data['OTT'] = OTT_Signal['OTT3']
-        data['Var'] = OTT_Signal['Var']
-        data['Tillson'] = Tillson
-        data['Zscore'] = Zscore
-        data['ZSMA'] = Zsma
+    data['OTT_Signal'] = data['Var'] > OTT_Signal['OTT3']
+    data['Zscore_Signal'] = data['Zscore'] > 0.85
 
-        data['OTT_Signal'] = data['Var'] > OTT_Signal['OTT3']
-        data['Zscore_Signal'] = data['Zscore'] > 0.85
+    data['Entry'] = data['OTT_Signal'] & data['Zscore_Signal']
+    data['Exit'] = False
+    for i in range(1, len(data) - 1):
+        if data['Tillson'].iloc[i-1] > data['Tillson'].iloc[i-2] and data['Tillson'].iloc[i-1] < data['Tillson'].iloc[i]:
+            data.at[data.index[i], 'Exit'] = True
 
-        data['Entry'] = data['OTT_Signal'] & data['Zscore_Signal']
-        data['Exit'] = False
-        for i in range(1, len(data) - 1):
-            if data['Tillson'].iloc[i-1] > data['Tillson'].iloc[i-2] and data['Tillson'].iloc[i-1] < data['Tillson'].iloc[i]:
-                data.at[data.index[i], 'Exit'] = True
+    return data
 
-        return data
-    except Exception as e:
-        st.error(f"An error occurred while generating signals: {e}")
-        logger.error(f"An error occurred while generating signals: {e}")
-        return pd.DataFrame()
 
 base="light"
 
@@ -145,38 +115,26 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    st.header('Hisse Arama')
     Hisse_Ozet = Hisse_Temel_Veriler()
-    
-    if not Hisse_Ozet.empty and 'Kod' in Hisse_Ozet.columns:
-        Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
-    else:
-        st.error("Failed to retrieve stock fundamental data. Please try again later.")
-        Hisse_Adı = None
-
+    st.header('Hisse Arama')
+    Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
     Lenght_1 = 6
     vf = 0.8
     prt = 2
     prc = 1.2
-    
-    if Hisse_Adı:
-        data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
-    else:
-        data = pd.DataFrame()
+    data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
 
-if not data.empty and all(col in data.columns for col in ['Close', 'OTT_Signal', 'Zscore_Signal', 'Exit']):
-    Son_Durum = data.tail(1)
-    col1, col2, col3, col4, col5 = st.columns(5)
-    Close = Son_Durum['Close'].iloc[0]
-    OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
-    Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
-    Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
+Son_Durum = data.tail(1)
+col1, col2, col3, col4, col5 = st.columns(5)
+Close = Son_Durum['Close'].iloc[0]
+OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
+Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
+Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
 
-    col2.metric('Kapanış Fiyatı', str(Close))
-    col3.metric('OTT Sinyal', str(OTT_Signal))
-    col4.metric('Z Skor Sinyal', str(Zscore_Signal))
-    col5.metric('Tillson Sinyal', str(Tillson_Signal))
+col2.metric('Kapanış Fiyatı', str(Close))
+col3.metric('OTT Sinyal', str(OTT_Signal))
+col4.metric('Z Skor Sinyal', str(Zscore_Signal))
+col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
-    st.dataframe(data.iloc[::-1], use_container_width=True)
-else:
-    st.warning("Failed to retrieve stock data. Please try again later.")
+st.dataframe(data.iloc[::-1], use_container_width=True)
+

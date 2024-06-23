@@ -4,31 +4,18 @@ import pandas_ta as ta
 from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
 import ssl
-from urllib import request, error
-import time
+from urllib import request
 
-# Function to retrieve stock fundamental data with retries
+
+# Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
     url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
     context = ssl._create_unverified_context()
-    
-    max_retries = 3
-    retries = 0
-    while retries < max_retries:
-        try:
-            response = request.urlopen(url1, context=context, timeout=10)
-            html_content = response.read()
-            df_list = pd.read_html(html_content, decimal=',', thousands='.')
-            df1 = df_list[2]  # Summary table of all stocks
-            return df1
-        except (error.URLError, error.HTTPError) as e:
-            print(f"Error fetching data: {e}")
-            retries += 1
-            time.sleep(2)  # Wait for 2 seconds before retrying
-
-    if retries == max_retries:
-        print("Max retries reached. Could not fetch data.")
-        return None  # or handle the error as needed
+    response = request.urlopen(url1, context=context)
+    url1 = response.read()
+    df = pd.read_html(url1, decimal=',', thousands='.')
+    df1 = df[2]  # Summary table of all stocks
+    return df1
 
 tv = TvDatafeed()
 
@@ -118,6 +105,7 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
+
 base="light"
 
 st.set_page_config(
@@ -149,3 +137,4 @@ col4.metric('Z Skor Sinyal', str(Zscore_Signal))
 col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
 st.dataframe(data.iloc[::-1], use_container_width=True)
+

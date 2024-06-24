@@ -1,33 +1,23 @@
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
-import requests
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-from requests.exceptions import RequestException
+import ssl
+from urllib import request
 
-# Function to retrieve stock fundamental data with retry logic
-def fetch_fundamental_data(url):
-    max_retries = 3
-    backoff_factor = 0.3
-    status_forcelist = (500, 502, 504)
 
-    session = requests.Session()
-    retries = Retry(total=max_retries,
-                    backoff_factor=backoff_factor,
-                    status_forcelist=status_forcelist)
-    session.mount('https://', HTTPAdapter(max_retries=retries))
+# Function to retrieve stock fundamental data
+def Hisse_Temel_Veriler():
+    url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
+    context = ssl._create_unverified_context()
+    response = request.urlopen(url1, context=context)
+    url1 = response.read()
+    df = pd.read_html(url1, decimal=',', thousands='.')
+    df1 = df[2]  # Summary table of all stocks
+    return df1
 
-    try:
-        response = session.get(url)
-        response.raise_for_status()
-        df_list = pd.read_html(response.content, decimal=',', thousands='.')
-        df = df_list[2]  # Assuming the third table is the summary table
-        return df
-    except RequestException as e:
-        st.error(f"Failed to retrieve data after {max_retries} attempts. Error: {e}")
-        return None
+tv = TvDatafeed()
 
 # Tillson T3 calculation function
 def TillsonT3(Close, high, low, vf, length):
@@ -90,11 +80,33 @@ def OTT(df, prt, prc):
 
 # Function to generate indicator signals
 def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
-    # Use your TvDatafeed and other calculations here
-    pass
+    data = tv.get_hist(symbol=Hisse_Adı, exchange='BIST', interval=Interval.in_daily, n_bars=500)
+    data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
 
-# Main Streamlit app
-base = "light"
+    OTT_Signal = OTT(data.copy(deep=True), prt, prc)
+    Tillson = TillsonT3(data['Close'], data['High'], data['Low'], vf, Lenght_1)
+    Zscore = ta.zscore(data['Close'], 21, 1)
+    Zsma = ta.sma(Zscore)
+
+    data['OTT'] = OTT_Signal['OTT3']
+    data['Var'] = OTT_Signal['Var']
+    data['Tillson'] = Tillson
+    data['Zscore'] = Zscore
+    data['ZSMA'] = Zsma
+
+    data['OTT_Signal'] = data['Var'] > OTT_Signal['OTT3']
+    data['Zscore_Signal'] = data['Zscore'] > 0.85
+
+    data['Entry'] = data['OTT_Signal'] & data['Zscore_Signal']
+    data['Exit'] = False
+    for i in range(1, len(data) - 1):
+        if data['Tillson'].iloc[i-1] > data['Tillson'].iloc[i-2] and data['Tillson'].iloc[i-1] < data['Tillson'].iloc[i]:
+            data.at[data.index[i], 'Exit'] = True
+
+    return data
+
+
+base="light"
 
 st.set_page_config(
     page_title="Hisse Sinyalleri",
@@ -103,26 +115,26 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    Hisse_Ozet = fetch_fundamental_data("https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx")
-    if Hisse_Ozet is not None:
-        st.header('Hisse Arama')
-        Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
-        Lenght_1 = 6
-        vf = 0.8
-        prt = 2
-        prc = 1.2
-        data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
+    Hisse_Ozet = Hisse_Temel_Veriler()
+    st.header('Hisse Arama')
+    Hisse_Adı = st.selectbox('Hisse Adı', Hisse_Ozet['Kod'])
+    Lenght_1 = 6
+    vf = 0.8
+    prt = 2
+    prc = 1.2
+    data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
 
-        Son_Durum = data.tail(1)
-        col1, col2, col3, col4, col5 = st.columns(5)
-        Close = Son_Durum['Close'].iloc[0]
-        OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
-        Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
-        Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
+Son_Durum = data.tail(1)
+col1, col2, col3, col4, col5 = st.columns(5)
+Close = Son_Durum['Close'].iloc[0]
+OTT_Signal = 'Alınabilir' if Son_Durum['OTT_Signal'].iloc[0] else 'Bekle'
+Zscore_Signal = 'Alınabilir' if Son_Durum['Zscore_Signal'].iloc[0] else 'Bekle'
+Tillson_Signal = 'Satılabilir' if Son_Durum['Exit'].iloc[0] else 'Bekle'
 
-        col2.metric('Kapanış Fiyatı', str(Close))
-        col3.metric('OTT Sinyal', str(OTT_Signal))
-        col4.metric('Z Skor Sinyal', str(Zscore_Signal))
-        col5.metric('Tillson Sinyal', str(Tillson_Signal))
+col2.metric('Kapanış Fiyatı', str(Close))
+col3.metric('OTT Sinyal', str(OTT_Signal))
+col4.metric('Z Skor Sinyal', str(Zscore_Signal))
+col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
-        st.dataframe(data.iloc[::-1], use_container_width=True)
+st.dataframe(data.iloc[::-1], use_container_width=True)
+

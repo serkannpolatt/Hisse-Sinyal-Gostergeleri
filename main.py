@@ -5,23 +5,31 @@ from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
 import ssl
 from urllib import request
+import time
+from urllib.error import URLError, HTTPError
 
-
-# Function to retrieve stock fundamental data
+# Function to retrieve stock fundamental data with retries
 def Hisse_Temel_Veriler():
-    url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
+    url = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
     context = ssl._create_unverified_context()
-    response = request.urlopen(url1, context=context)
-    url1 = response.read()
-    df = pd.read_html(url1, decimal=',', thousands='.')
-    df1 = df[2]  # Summary table of all stocks
-    return df1
+    retries = 5
+    for i in range(retries):
+        try:
+            response = request.urlopen(url, context=context)
+            html = response.read()
+            df = pd.read_html(html, decimal=',', thousands='.')
+            return df[2]  # Summary table of all stocks
+        except (URLError, HTTPError) as e:
+            print(f"Attempt {i+1}/{retries} failed: {e}")
+            time.sleep(2)
+    raise Exception("Failed to retrieve data after multiple attempts")
 
+# Initialize tvDatafeed
 tv = TvDatafeed()
 
 # Tillson T3 calculation function
-def TillsonT3(Close, high, low, vf, length):
-    ema_first_input = (high + low + 2 * Close) / 4
+def TillsonT3(Close, High, Low, vf, length):
+    ema_first_input = (High + Low + 2 * Close) / 4
     e1 = ta.ema(ema_first_input, length)
     e2 = ta.ema(e1, length)
     e3 = ta.ema(e2, length)
@@ -29,7 +37,7 @@ def TillsonT3(Close, high, low, vf, length):
     e5 = ta.ema(e4, length)
     e6 = ta.ema(e5, length)
 
-    c1 = -1 * vf * vf * vf
+    c1 = -vf * vf * vf
     c2 = 3 * vf * vf + 3 * vf * vf * vf
     c3 = -6 * vf * vf - 3 * vf - 3 * vf * vf * vf
     c4 = 1 + 3 * vf + vf * vf * vf + 3 * vf * vf
@@ -105,15 +113,14 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
-
-base="light"
-
+# Streamlit application configuration
 st.set_page_config(
     page_title="Hisse Sinyalleri",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Streamlit sidebar configuration
 with st.sidebar:
     Hisse_Ozet = Hisse_Temel_Veriler()
     st.header('Hisse Arama')
@@ -124,6 +131,7 @@ with st.sidebar:
     prc = 1.2
     data = indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc)
 
+# Displaying the latest data and metrics
 Son_Durum = data.tail(1)
 col1, col2, col3, col4, col5 = st.columns(5)
 Close = Son_Durum['Close'].iloc[0]
@@ -136,4 +144,5 @@ col3.metric('OTT Sinyal', str(OTT_Signal))
 col4.metric('Z Skor Sinyal', str(Zscore_Signal))
 col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
+# Display the data table
 st.dataframe(data.iloc[::-1], use_container_width=True)

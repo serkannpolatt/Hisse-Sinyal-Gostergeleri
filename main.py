@@ -3,29 +3,30 @@ import pandas as pd
 import pandas_ta as ta
 from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
-import ssl
-from urllib import request
-import time
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 # Function to retrieve stock fundamental data with retry logic
 def Hisse_Temel_Veriler():
     url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
-    context = ssl._create_unverified_context()
     max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = request.urlopen(url1, context=context)
-            url1 = response.read()
-            df = pd.read_html(url1, decimal=',', thousands='.')
-            df1 = df[2]  # Summary table of all stocks
-            return df1
-        except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)  # Exponential backoff
-                continue
-            else:
-                st.error(f"Failed to retrieve data after {max_retries} attempts. Error: {e}")
-                return None
+    backoff_factor = 0.3
+    status_forcelist = (500, 502, 504)
+
+    session = requests.Session()
+    retries = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=status_forcelist)
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+
+    try:
+        response = session.get(url1)
+        response.raise_for_status()
+        df = pd.read_html(response.content, decimal=',', thousands='.')
+        df1 = df[2]  # Summary table of all stocks
+        return df1
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to retrieve data after {max_retries} attempts. Error: {e}")
+        return None
 
 tv = TvDatafeed()
 

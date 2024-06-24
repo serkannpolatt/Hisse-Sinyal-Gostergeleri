@@ -1,33 +1,41 @@
-import numpy as np
-import pandas as pd
-import pandas_ta as ta
-from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
+import pandas as pd
+import numpy as np
 import ssl
-from urllib import request
-
+from urllib import request, error
+import talib as ta
+from tvDatafeed import TvDatafeed, Interval
 
 # Function to retrieve stock fundamental data
 def Hisse_Temel_Veriler():
     url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
     context = ssl._create_unverified_context()
-    response = request.urlopen(url1, context=context)
-    url1 = response.read()
-    df = pd.read_html(url1, decimal=',', thousands='.')
-    df1 = df[2]  # Summary table of all stocks
-    return df1
-
-tv = TvDatafeed()
+    
+    # Error handling and retry logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = request.urlopen(url1, context=context)
+            url1 = response.read()
+            df = pd.read_html(url1, decimal=',', thousands='.')
+            df1 = df[2]  # Summary table of all stocks
+            return df1
+        except error.URLError as e:
+            if attempt < max_retries - 1:
+                continue
+            else:
+                st.error(f"Failed to retrieve data: {e}")
+                return pd.DataFrame()  # Return empty DataFrame on failure
 
 # Tillson T3 calculation function
 def TillsonT3(Close, high, low, vf, length):
     ema_first_input = (high + low + 2 * Close) / 4
-    e1 = ta.ema(ema_first_input, length)
-    e2 = ta.ema(e1, length)
-    e3 = ta.ema(e2, length)
-    e4 = ta.ema(e3, length)
-    e5 = ta.ema(e4, length)
-    e6 = ta.ema(e5, length)
+    e1 = ta.EMA(ema_first_input, length)
+    e2 = ta.EMA(e1, length)
+    e3 = ta.EMA(e2, length)
+    e4 = ta.EMA(e3, length)
+    e5 = ta.EMA(e4, length)
+    e6 = ta.EMA(e5, length)
 
     c1 = -1 * vf * vf * vf
     c2 = 3 * vf * vf + 3 * vf * vf * vf
@@ -80,13 +88,14 @@ def OTT(df, prt, prc):
 
 # Function to generate indicator signals
 def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
+    tv = TvDatafeed()
     data = tv.get_hist(symbol=Hisse_Adı, exchange='BIST', interval=Interval.in_daily, n_bars=500)
     data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
 
     OTT_Signal = OTT(data.copy(deep=True), prt, prc)
     Tillson = TillsonT3(data['Close'], data['High'], data['Low'], vf, Lenght_1)
     Zscore = ta.zscore(data['Close'], 21, 1)
-    Zsma = ta.sma(Zscore)
+    Zsma = ta.SMA(Zscore)
 
     data['OTT'] = OTT_Signal['OTT3']
     data['Var'] = OTT_Signal['Var']
@@ -104,9 +113,6 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
             data.at[data.index[i], 'Exit'] = True
 
     return data
-
-
-base="light"
 
 st.set_page_config(
     page_title="Hisse Sinyalleri",
@@ -137,4 +143,3 @@ col4.metric('Z Skor Sinyal', str(Zscore_Signal))
 col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
 st.dataframe(data.iloc[::-1], use_container_width=True)
-

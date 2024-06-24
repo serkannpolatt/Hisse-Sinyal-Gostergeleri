@@ -12,4 +12,4 @@ seleniumbase==4.17.9
 pandas_ta
 git+https://github.com/baselsm/tvdatafeed
 requests
-ta-lib
+TA-Lib == 0.4.31

@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
-from tvDatafeed import TvDatafeed, Interval
 import streamlit as st
 import requests
 from requests.adapters import HTTPAdapter
@@ -9,7 +8,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 # Function to retrieve stock fundamental data with retry logic
 def Hisse_Temel_Veriler():
-    url1 = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx#page-1"
+    url = "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/Temel-Degerler-Ve-Oranlar.aspx"
     max_retries = 3
     backoff_factor = 0.3
     status_forcelist = (500, 502, 504)
@@ -19,16 +18,14 @@ def Hisse_Temel_Veriler():
     session.mount('https://', HTTPAdapter(max_retries=retries))
 
     try:
-        response = session.get(url1)
+        response = session.get(url)
         response.raise_for_status()
-        df = pd.read_html(response.content, decimal=',', thousands='.')
-        df1 = df[2]  # Summary table of all stocks
-        return df1
+        df_list = pd.read_html(response.content, decimal=',', thousands='.')
+        df = df_list[2]  # Assuming the third table is the summary table
+        return df
     except requests.exceptions.RequestException as e:
         st.error(f"Failed to retrieve data after {max_retries} attempts. Error: {e}")
         return None
-
-tv = TvDatafeed()
 
 # Tillson T3 calculation function
 def TillsonT3(Close, high, low, vf, length):
@@ -116,7 +113,7 @@ def indicator_Signals(Hisse_Adı, Lenght_1, vf, prt, prc):
 
     return data
 
-
+# Main Streamlit app
 base="light"
 
 st.set_page_config(

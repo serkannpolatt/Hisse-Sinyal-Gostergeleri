@@ -137,4 +137,3 @@ col4.metric('Z Skor Sinyal', str(Zscore_Signal))
 col5.metric('Tillson Sinyal', str(Tillson_Signal))
 
 st.dataframe(data.iloc[::-1], use_container_width=True)
-

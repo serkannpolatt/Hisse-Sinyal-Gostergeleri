@@ -6,3 +6,9 @@ seleniumbase==4.17.9
 pandas_ta
 git+https://github.com/baselsm/tvdatafeed
 requests
+numpy
+pandas
+pandas_ta
+tvDatafeed
+streamlit
+lxml
